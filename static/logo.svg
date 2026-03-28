@@ -1,0 +1,27 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Gradient background -->
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e40af"/>
+      <stop offset="100%" stop-color="#14b8a6"/>
+    </linearGradient>
+  </defs>
+
+  <circle cx="60" cy="60" r="55" fill="url(#grad)" />
+
+  <!-- B letter -->
+  <text x="50%" y="58%" text-anchor="middle"
+        font-size="50"
+        font-family="Inter, Arial"
+        fill="white"
+        font-weight="600">
+    B
+  </text>
+
+  <!-- Bifidobacterium shape (curved Y) -->
+  <path d="M60 35 Q60 55 60 75" stroke="white" stroke-width="3" fill="none"/>
+  <path d="M60 50 Q45 60 40 75" stroke="white" stroke-width="3" fill="none"/>
+  <path d="M60 50 Q75 60 80 75" stroke="white" stroke-width="3" fill="none"/>
+
+</svg>

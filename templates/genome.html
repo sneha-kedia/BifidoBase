@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>BifidoBase - Genome</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Arial;
+            background: #f5f7fb;
+        }
+
+        /* HEADER */
+        .header {
+            background: linear-gradient(90deg, #1e3a8a, #2563eb);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        /* CONTAINER */
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        /* TITLE */
+        .title-card {
+            background: white;
+            padding: 18px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        /* STATS */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, #2563eb, #14b8a6);
+            color: white;
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .gc-bar {
+            margin-top: 5px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .gc-fill {
+            height: 8px;
+            background: white;
+        }
+
+        /* SECTIONS */
+        h2 {
+            margin-top: 30px;
+            color: #1e3a8a;
+        }
+
+        .card {
+            margin-top: 10px;
+            background: white;
+            padding: 18px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .row {
+            margin: 8px 0;
+        }
+
+        .label {
+            font-weight: 600;
+        }
+
+        /* BUTTON */
+        .btn {
+            margin-top: 10px;
+            padding: 10px 14px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(90deg, #2563eb, #14b8a6);
+            color: white;
+            cursor: pointer;
+        }
+
+    </style>
+</head>
+
+<body>
+
+<div class="header">
+    BifidoBase Genome Viewer
+</div>
+
+<div class="container">
+
+    <!-- ACCESSION -->
+    <div class="title-card">
+        {{ data.assembly_accession }}
+    </div>
+
+    <!-- STATS -->
+    <div class="stats">
+
+        <div class="stat-box">
+            🧬
+            <div class="stat-value">{{ data.genome_size }}</div>
+            Genome Size
+        </div>
+
+        <div class="stat-box">
+            🧪
+            <div class="stat-value">{{ data.gc_content }}%</div>
+            GC Content
+            <div class="gc-bar">
+                <div class="gc-fill" style="width: {{ data.gc_content }}%"></div>
+            </div>
+        </div>
+
+        <div class="stat-box">
+            📊
+            <div class="stat-value">{{ data.n50 }}</div>
+            N50
+        </div>
+
+        <div class="stat-box">
+            🧩
+            <div class="stat-value">{{ data.contig_count }}</div>
+            Contigs
+        </div>
+
+    </div>
+
+    <!-- OVERVIEW -->
+    <h2>Genome Overview</h2>
+    <div class="card">
+        <div class="row"><span class="label">Species:</span> {{ data.species }}</div>
+        <div class="row"><span class="label">Strain:</span> {{ data.strain }}</div>
+        <div class="row"><span class="label">Assembly Level:</span> {{ data.assembly_level }}</div>
+    </div>
+
+    <!-- METADATA -->
+    <h2>Metadata</h2>
+    <div class="card">
+        <div class="row"><span class="label">Source:</span> {{ data.source_clean }}</div>
+        <div class="row"><span class="label">Country:</span> {{ data.country_clean }}</div>
+        <div class="row"><span class="label">Host:</span> {{ data.host_clean }}</div>
+        <div class="row"><span class="label">BioProject:</span> {{ data.bioproject }}</div>
+        <div class="row"><span class="label">BioSample:</span> {{ data.biosample }}</div>
+    </div>
+
+    <!-- EXTERNAL LINKS -->
+    <h2>External Links</h2>
+    <div class="card">
+
+        <a class="btn"
+           href="https://www.ncbi.nlm.nih.gov/assembly/{{ data.assembly_accession }}"
+           target="_blank">
+           View on NCBI
+        </a>
+
+        <br>
+
+        <button class="btn" onclick="downloadJSON()">
+            Download Metadata (JSON)
+        </button>
+
+    </div>
+
+<script>
+async function loadSimilar() {
+    const res = await fetch("/similar/{{ data.assembly_accession }}");
+    const data = await res.json();
+
+    let html = "";
+
+    data.forEach(d => {
+        html += `<div>${d.assembly_accession} - ${d.species}</div>`;
+    });
+
+    document.getElementById("similarResults").innerHTML = html;
+}
+
+function downloadJSON() {
+    const data = {{ data | tojson }};
+    const blob = new Blob([JSON.stringify(data, null, 2)]);
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "{{ data.assembly_accession }}.json";
+    a.click();
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>BifidoBase</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+body {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(180deg, #eef2ff, #f8fafc);
+}
+
+/* ===== HEADER ===== */
+.header {
+    background: linear-gradient(120deg, #0f172a, #1e3a8a, #2563eb);
+    color: white;
+    padding: 40px 20px;
+    text-align: center;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    border-bottom: 3px solid #14b8a6; /* FIXED missing ; */
+}
+
+.logo-img {
+    width: 70px;
+    margin-bottom: 10px;
+}
+
+.title {
+    font-size: 36px;
+    font-weight: 700;
+}
+
+.subtitle {
+    font-size: 16px;
+    opacity: 0.85;
+}
+
+/* ===== CONTAINER ===== */
+.container {
+    max-width: 1100px;
+    margin: auto;
+    padding: 25px;
+}
+
+/* ===== STATS ===== */
+.stats {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.stat-card {
+    flex: 1;
+    padding: 18px;
+    border-radius: 14px;
+    text-align: center;
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+    transition: all 0.25s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+}
+
+.stat-value {
+    font-size: 26px;
+    font-weight: bold;
+    color: #10b981;
+}
+
+.stat-label {
+    font-size: 13px;
+    color: #666;
+}
+
+/* ===== SEARCH ===== */
+.search-box {
+    margin-bottom: 15px;
+}
+
+#searchBox {
+    width: 100%;
+    padding: 16px;
+    font-size: 16px;
+    border-radius: 12px;
+    border: 1px solid #ddd;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+/* ===== FILTERS ===== */
+.filters {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+}
+
+select {
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+
+/* ===== BUTTONS ===== */
+button {
+    background: linear-gradient(90deg, #2563eb, #3b82f6);
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+button:hover {
+    transform: scale(1.05);
+    background: linear-gradient(90deg, #2563eb, #14b8a6);
+}
+
+/* ===== COMPARE BUTTON ===== */
+.compare-btn {
+    margin: 10px 0;
+}
+
+/* ===== TABLE ===== */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+}
+
+th {
+    background: linear-gradient(90deg, #1e3a8a, #2563eb);
+    color: white;
+    padding: 14px;
+    font-weight: 600;
+}
+
+td {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+}
+
+tr:hover {
+    background: #f1f5ff;
+}
+
+/* ===== RESULT COUNT ===== */
+#resultCount {
+    margin: 10px 0;
+    font-weight: 500;
+}
+
+/* ===== PAGINATION ===== */
+#pagination {
+    margin-top: 15px;
+    text-align: center;
+}
+    </style>
+</head>
+
+<body>
+
+<!-- HEADER -->
+<div class="header">
+    <img src="/static/logo.svg" class="logo-img">
+    <div class="title">BifidoBase</div>
+    <div class="subtitle">Global Bifidobacterium Genome Database</div>
+</div>
+
+<div class="container">
+
+    <!-- STATS -->
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-value" id="totalGenomes">--</div>
+            <div class="stat-label">Total Genomes</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-value" id="totalSpecies">--</div>
+            <div class="stat-label">Species</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-value" id="totalCountries">--</div>
+            <div class="stat-label">Countries</div>
+        </div>
+    </div>
+
+    <!-- SEARCH -->
+    <div class="search-box">
+        <input type="text" id="searchBox" placeholder="Search species (e.g. longum)">
+        <div id="suggestions"></div>
+    </div>
+
+    <!-- FILTERS -->
+    <div class="filters">
+        <select id="sourceFilter"></select>
+        <select id="countryFilter"></select>
+
+        <select id="assemblyFilter">
+            <option value="">All Assemblies</option>
+            <option value="refseq">RefSeq</option>
+            <option value="genbank">GenBank</option>
+        </select>
+
+        <select id="sortFilter">
+            <option value="">Sort By</option>
+            <option value="genome_size_desc">Genome Size ↓</option>
+            <option value="genome_size_asc">Genome Size ↑</option>
+            <option value="gc_content_desc">GC ↓</option>
+            <option value="gc_content_asc">GC ↑</option>
+        </select>
+
+        <button onclick="searchData()">Search</button>
+    </div>
+
+    <div id="resultCount"></div>
+
+    <!-- COMPARE BUTTON -->
+    <a href="/compare-page">
+        <button class="compare-btn">Compare Genomes</button>
+    </a>
+
+    <!-- TABLE -->
+    <table>
+        <thead>
+            <tr>
+                <th>Accession</th>
+                <th>Species</th>
+                <th>Source</th>
+                <th>Country</th>
+            </tr>
+        </thead>
+        <tbody id="resultsTable"></tbody>
+    </table>
+
+    <div id="pagination"></div>
+
+</div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+
+</body>
+</html>

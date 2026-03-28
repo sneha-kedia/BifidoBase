@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Genome Comparison</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+body {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(180deg, #eef2ff, #f8fafc);
+}
+
+/* HEADER */
+.header {
+    background: linear-gradient(120deg, #0f172a, #1e3a8a, #2563eb);
+    color: white;
+    padding: 30px;
+    text-align: center;
+    border-bottom: 3px solid #14b8a6;
+}
+
+.title {
+    font-size: 28px;
+    font-weight: 700;
+}
+
+/* CONTAINER */
+.container {
+    max-width: 900px;
+    margin: auto;
+    padding: 25px;
+}
+
+/* SELECTS */
+.select-box {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+select {
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    flex: 1;
+}
+
+/* BUTTON */
+button {
+    background: linear-gradient(90deg, #2563eb, #3b82f6);
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: linear-gradient(90deg, #2563eb, #14b8a6);
+}
+
+/* RESULT TABLE */
+.result-box {
+    margin-top: 20px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+}
+
+th {
+    background: linear-gradient(90deg, #1e3a8a, #2563eb);
+    color: white;
+    padding: 12px;
+}
+
+td {
+    padding: 10px;
+    text-align: center;
+    border-bottom: 1px solid #eee;
+}
+
+tr:hover {
+    background: #f1f5ff;
+}
+    </style>
+</head>
+
+<body>
+
+<!-- HEADER -->
+<div class="header">
+    <div class="title">Genome Comparison Tool</div>
+</div>
+
+<div class="container">
+
+    <!-- SELECT -->
+    <div class="select-box">
+        <select id="acc1"></select>
+        <select id="acc2"></select>
+        <button onclick="compareGenomes()">Compare</button>
+    </div>
+
+    <!-- RESULT -->
+    <div id="compareResult" class="result-box"></div>
+
+</div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+
+</body>
+</html>
