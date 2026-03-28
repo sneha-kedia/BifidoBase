@@ -7,9 +7,9 @@ import pandas as pd
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def load_data():
-    path = os.path.join(BASE_DIR, "..", "data", "metadata_final.csv")
+    csv_path = os.path.join(BASE_DIR, "metadata_final.csv")
     print("Loading from:", path)   # 🔥 DEBUG LINE
-    df = pd.read_csv(path)
+    df = pd.read_csv(csv_path)
     print("Shape:", df.shape)      # 🔥 DEBUG
     return df.fillna("unknown")
 
