@@ -12,10 +12,19 @@ async function loadFilters() {
         const countrySelect = document.getElementById("countryFilter");
 
         if (!sourceSelect || !countrySelect) return;
-        
+
         sourceSelect.innerHTML = `<option value="">All Sources</option>`;
         countrySelect.innerHTML = `<option value="">All Countries</option>`;
 
+        const assemblyLevelSelect = document.getElementById("assemblyLevelFilter");
+
+        if (assemblyLevelSelect) {
+            assemblyLevelSelect.innerHTML = `<option value="">All Assembly Levels</option>`;
+
+        data.assembly_levels.forEach(a => {
+            assemblyLevelSelect.innerHTML += `<option value="${a}">${a}</option>`;
+    });
+}
         data.sources.forEach(s => {
             sourceSelect.innerHTML += `<option value="${s}">${s}</option>`;
         });
@@ -116,9 +125,10 @@ async function loadStats() {
 
         if (!g || !s || !c) return;
 
-        g.innerText = data.genomes;
+        g.innerText = data.total;
         s.innerText = data.species;
         c.innerText = data.countries;
+
     } catch (err) {
         console.error("Stats error:", err);
     }
@@ -128,6 +138,7 @@ async function loadStats() {
 async function searchData(page = 1) {
 
     const searchBox = document.getElementById("searchBox");
+
     if (!searchBox) return;
 
     currentPage = page;
@@ -136,12 +147,13 @@ async function searchData(page = 1) {
     const source = document.getElementById("sourceFilter")?.value || "";
     const country = document.getElementById("countryFilter")?.value || "";
     const assembly = document.getElementById("assemblyFilter")?.value || "";
+    const assemblyLevel = document.getElementById("assemblyLevelFilter")?.value || "";
     const sort = document.getElementById("sortFilter")?.value || "";
 
     const suggestions = document.getElementById("suggestions");
     if (suggestions) suggestions.style.display = "none";
 
-const url = `/search?query=${query}&source=${source}&country=${country}&assembly_type=${assembly}&sort=${sort}&page=${page}`;
+const url = `/search?query=${query}&source=${source}&country=${country}&assembly_type=${assembly}&assembly_level=${assemblyLevel}&sort=${sort}&page=${page}`;
     const res = await fetch(url);
     const result = await res.json();
 
@@ -157,17 +169,22 @@ const url = `/search?query=${query}&source=${source}&country=${country}&assembly
     if (!table) return;
 
     table.innerHTML = "";
+    data.forEach(item => {
+    table.innerHTML += `
+        <tr>
+            <td>
+            <a href="/genome/${item.assembly_accession}">
+                ${item.assembly_accession}
+            </a>
+            </td>
+            <td>${item.species_final}</td>
+            <td>${item.source_final}</td>
+            <td>${item.country_final}</td>
+            <td>${item.assembly_level || "unknown"}</td>
+        </tr>
+    `;
+});
 
-    data.forEach(row => {
-        table.innerHTML += `
-            <tr>
-                <td><a href="/genome/${row.assembly_accession}">${row.assembly_accession}</a></td>
-                <td>${row.species_final}</td>
-                <td>${row.source_final}</td>
-                <td>${row.country_final}</td>
-            </tr>
-        `;
-    });
 
     renderPagination(total);
 }
@@ -196,54 +213,60 @@ function renderPagination(total) {
 
 // ================= COMPARE =================
 function compareGenomes() {
-    const acc1 = document.getElementById("acc1")?.value;
-    const acc2 = document.getElementById("acc2")?.value;
+
+    const acc1 = document.getElementById("acc1").value;
+    const acc2 = document.getElementById("acc2").value;
 
     if (!acc1 || !acc2) {
-        alert("Select both genomes");
+        alert("Enter both accessions");
         return;
     }
+
+    document.getElementById("compareResult").innerHTML = "Loading...";
 
     fetch(`/compare?acc1=${acc1}&acc2=${acc2}`)
         .then(res => res.json())
         .then(data => {
 
-            if (data.error) {
-                alert(data.error);
-                return;
-            }
+            console.log(data);  // ✅ keep debug here
 
-            const output = document.getElementById("compareResult");
-            if (!output) return;
+            document.getElementById("compareResult").innerHTML = `
+<div class="compare-card">
+    <h3>${acc1} vs ${acc2}</h3>
 
-            output.innerHTML = `
-                <h3>Genome Comparison</h3>
-                <table border="1" style="width:100%; text-align:center;">
-                    <tr>
-                        <th>Feature</th>
-                        <th>${data.genome1.accession}</th>
-                        <th>${data.genome2.accession}</th>
-                    </tr>
-                    <tr><td>Species</td><td>${data.genome1.species}</td><td>${data.genome2.species}</td></tr>
-                    <tr><td>Genome Size</td><td>${data.genome1.genome_size}</td><td>${data.genome2.genome_size}</td></tr>
-                    <tr><td>GC %</td><td>${data.genome1.gc_content}</td><td>${data.genome2.gc_content}</td></tr>
-                    <tr><td>Contigs</td><td>${data.genome1.contigs}</td><td>${data.genome2.contigs}</td></tr>
-                    <tr><td>N50</td><td>${data.genome1.n50}</td><td>${data.genome2.n50}</td></tr>
-                    <tr><td>Source</td><td>${data.genome1.source}</td><td>${data.genome2.source}</td></tr>
-                    <tr><td>Country</td><td>${data.genome1.country}</td><td>${data.genome2.country}</td></tr>
-                </table>
-            `;
+    <table class="compare-table">
+        <tr>
+            <th>Feature</th>
+            <th>${acc1}</th>
+            <th>${acc2}</th>
+        </tr>
+        <tr>
+            <td>Genome Size</td>
+            <td>${Number(data.genome_size_1).toLocaleString()}</td>
+            <td>${Number(data.genome_size_2).toLocaleString()}</td>
+        </tr>
+        <tr>
+            <td>GC Content</td>
+            <td>${data.gc_1 || "NA"}</td>
+            <td>${data.gc_2 || "NA"}</td>
+        </tr>
+    </table>
+</div>
+`;
+        })
+        .catch(err => {
+            console.error(err);
+            document.getElementById("compareResult").innerHTML = "Error loading data";
         });
 }
-
 // ================= LOAD ACCESSIONS =================
 function loadCompareOptions() {
     console.log("Loading compare options...");
 
-    const acc1 = document.getElementById("acc1");
-    const acc2 = document.getElementById("acc2");
+    const list1 = document.getElementById("accList1");
+    const list2 = document.getElementById("accList2");
 
-    if (!acc1 || !acc2) return;
+    if (!list1 || !list2) return;
 
     fetch('/accessions')
         .then(res => res.json())
@@ -251,19 +274,24 @@ function loadCompareOptions() {
 
             console.log("Accessions:", data.length);
 
-            acc1.innerHTML = '<option value="">Select Genome 1</option>';
-            acc2.innerHTML = '<option value="">Select Genome 2</option>';
+            list1.innerHTML = "";
+            list2.innerHTML = "";
 
             data.forEach(a => {
                 const opt1 = document.createElement("option");
                 opt1.value = a;
-                opt1.textContent = a;
 
-                const opt2 = opt1.cloneNode(true);
+                const opt2 = document.createElement("option");
+                opt2.value = a;
 
-                acc1.appendChild(opt1);
-                acc2.appendChild(opt2);
+                list1.appendChild(opt1);
+                list2.appendChild(opt2);
             });
+
+            // 🔥 FORCE REATTACH FIX
+            const input1 = document.getElementById("acc1");
+            const input2 = document.getElementById("acc2");
+
         })
         .catch(err => console.error("Accessions error:", err));
 }
@@ -276,14 +304,19 @@ document.addEventListener("keydown", function (e) {
     const acc1 = document.getElementById("acc1");
     const acc2 = document.getElementById("acc2");
 
-    if (acc1 && acc2) {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            compareGenomes();
-        }
-        return; // stop here → don't trigger search
-    }
+   if (acc1 && acc2) {
+    if (e.key === "Enter") {
 
+        const val1 = acc1.value.trim();
+        const val2 = acc2.value.trim();
+
+        if (!val1 || !val2) return;  // ✅ prevent empty compare
+
+        e.preventDefault();
+        compareGenomes();
+    }
+    return;
+}
     // ===== SEARCH PAGE =====
     const box = document.getElementById("suggestions");
     if (!box) return;
@@ -320,11 +353,33 @@ document.addEventListener("keydown", function (e) {
         searchData();
     }
 });
+function loadChart() {
+    const ctx = document.getElementById("genomeChart");
+    if (!ctx || typeof Chart === "undefined") return;
 
+    fetch("/stats")
+        .then(res => res.json())
+        .then(data => {
+            new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: ["Genomes", "Species", "Countries"],
+                    datasets: [{
+                        label: "Database Stats",
+                        data: [data.total, data.species, data.countries]
+                    }]
+                }
+            });
+        });
+}
 
 // ================= INIT =================
 window.onload = function () {
 
+    // ===== HOME PAGE =====
+    if (document.getElementById("totalGenomes")) {
+        loadStats();
+    }
     // ===== SEARCH PAGE =====
     const searchBox = document.getElementById("searchBox");
 
@@ -332,16 +387,16 @@ window.onload = function () {
         searchBox.addEventListener("input", autocompleteSpecies);
 
         loadFilters();
-        loadStats();
 
         document.getElementById("sourceFilter")?.addEventListener("change", () => searchData(1));
         document.getElementById("countryFilter")?.addEventListener("change", () => searchData(1));
-        document.getElementById("speciesFilter")?.addEventListener("change", () => searchData(1));
         document.getElementById("assemblyFilter")?.addEventListener("change", () => searchData(1));
+        document.getElementById("assemblyLevelFilter")?.addEventListener("change", () => searchData(1));
         document.getElementById("sortFilter")?.addEventListener("change", () => searchData(1));
 
         searchData(1);
-    }
+        loadChart();
+   }
 
     // ===== COMPARE PAGE =====
     const acc1 = document.getElementById("acc1");

@@ -1,59 +1,151 @@
 body {
     font-family: 'Segoe UI', sans-serif;
-    margin: 0;
-    background: #f5f7fb;
+    margin-bottom: 0;
+    background: #f1f5f9;
+}
+.navbar {
+    background: #ffffff;
+    padding: 12px 20px;
+    display: flex;
+    gap: 25px;
+    justify-content: center;
+    border-bottom: 2px solid #e5e7eb;
+    margin-bottom: 25px;
 }
 
+.navbar a {
+    color: #1e3a8a;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.navbar a:hover {
+    color: #14b8a6;
+}
 /* ===== HERO ===== */
+/* HERO */
+/* HERO */
 .hero {
-    background: linear-gradient(135deg, #1e3c72, #2a5298);
-    color: white;
     text-align: center;
-    padding: 40px 20px;
+    padding: 50px 20px 30px;
 }
 
 .hero h1 {
-    margin: 10px 0;
     font-size: 36px;
+    font-weight: 700;
+    color: #1e3a8a;
+    margin-bottom: 10px;
 }
 
 .hero p {
-    opacity: 0.9;
+    font-size: 16px;
+    color: #475569;
+    max-width: 700px;
+    margin: auto;
 }
-
-/* ===== STATS ===== */
+/* STATS */
 .stats {
     display: flex;
     justify-content: center;
-    gap: 20px;
-    margin-top: -30px;
+    gap: 30px;
+    margin: 30px 0 50px;
 }
 
-.card {
+.stat-box {
     background: white;
-    padding: 20px 30px;
-    border-radius: 12px;
+    padding: 30px 40px;
+    border-radius: 14px;
     text-align: center;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    min-width: 180px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+    transition: 0.2s ease;
 }
 
-.card h2 {
-    margin: 0;
-    color: #2a9d8f;
+.stat-box:hover {
+    transform: translateY(-5px);
 }
 
+.stat-box h2 {
+    font-size: 34px;
+    color: #2563eb;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.stat-box p {
+    font-size: 14px;
+    color: #64748b;
+}
+
+.info-strip {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin: 30px 0;
+    color: #1e3a8a;
+    font-weight: 600;
+}
+/* FEATURES */
+.features {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin-bottom: 60px;
+}
+
+.feature-card {
+    background: white;
+    padding: 25px;
+    border-radius: 14px;
+    width: 260px;
+    text-align: center;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+    transition: 0.2s;
+}
+
+.feature-card:hover {
+    transform: translateY(-6px);
+}
+
+.feature-card h3 {
+    color: #1e3a8a;
+    margin-bottom: 10px;
+}
+
+/* ABOUT */
+.about-preview {
+    text-align: center;
+    padding: 60px 20px;
+    max-width: 800px;
+    margin: auto;
+}
 /* ===== SEARCH ===== */
-.search-box {
-    width: 60%;
-    margin: 30px auto;
-    display: block;
-    padding: 15px;
-    border-radius: 10px;
-    border: none;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+.main-container {
+    max-width: 1100px;
+    margin: auto;
+    padding: 20px;
 }
+.search-wrapper {
+    width: 100%;
+    max-width: 620px;   /* 🔥 slightly bigger than input */
+    margin: auto;
 
+    padding: 10px;      /* gives breathing space */
+
+    border-radius: 14px;
+    background: #eef2ff;
+
+    box-sizing: border-box;
+}
+.suggestions-box {
+    position: absolute;
+    background: white;
+    border: 1px solid #ccc;
+    width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 9999;
+}
 /* ===== FILTERS ===== */
 .filters {
     display: flex;
@@ -80,7 +172,12 @@ body {
 .btn:hover {
     background: #1f5ad6;
 }
-
+.main-container {
+    max-width: 1100px;
+    margin: auto;
+    padding: 20px;
+    overflow-x: hidden;   /* 🔥 prevents horizontal overflow */
+}
 /* ===== TABLE ===== */
 .table-container {
     width: 80%;
@@ -111,8 +208,107 @@ tr:nth-child(even) {
     background: #f2f2f2;
 }
 
-/* ===== COMPARE BUTTON ===== */
-.compare-btn {
-    margin: 15px auto;
-    display: block;
+/* ===== COMPARE PAGE ===== */
+.compare-container {
+    max-width: 800px;
+    margin: 40px auto;
+    text-align: center;
+}
+
+.compare-container h2 {
+    margin-bottom: 20px;
+}
+
+.compare-inputs {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 30px;
+}
+
+.compare-inputs input {
+    padding: 10px;
+    width: 220px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+}
+
+.compare-inputs button {
+    padding: 10px 16px;
+    background: #2d6cdf;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.compare-inputs button:hover {
+    background: #1f4fb5;
+}
+.compare-card {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.compare-table th {
+    background: #2d6cdf;
+    color: white;
+    padding: 10px;
+}
+
+.compare-table td {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+/* RESULT */
+.result-box {
+    max-width: 1000px;
+    margin: 30px auto;
+}
+/* HEADER FIX */
+.header {
+    background: linear-gradient(120deg, #0f172a, #1e3a8a, #2563eb);
+    color: white;
+    padding: 40px 20px 25px;
+    border-bottom: 3px solid #14b8a6;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;   /* ✅ THIS is the key */
+    justify-content: center;
+    text-align: center;
+}
+/* LOGO */
+
+/* TEXT */
+.logo-img {
+    width: 75px;
+    height: 75px;
+    margin-bottom: 10px;
+}
+.title {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
+.subtitle {
+    font-size: 13px;
+    color: #cbd5f5;
+    margin-top: 4px;
+}
+.section-divider {
+    width: 60px;
+    height: 4px;
+    background: #2563eb;
+    margin: 20px auto;
+    border-radius: 2px;
 }

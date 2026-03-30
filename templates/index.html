@@ -4,13 +4,14 @@
     <title>BifidoBase</title>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
 body {
     margin: 0;
     font-family: 'Inter', sans-serif;
     background: linear-gradient(180deg, #eef2ff, #f8fafc);
 }
+
 
 /* ===== HEADER ===== */
 .header {
@@ -78,9 +79,6 @@ body {
 }
 
 /* ===== SEARCH ===== */
-.search-box {
-    margin-bottom: 15px;
-}
 
 #searchBox {
     width: 100%;
@@ -142,11 +140,13 @@ th {
     color: white;
     padding: 14px;
     font-weight: 600;
+    text-align: center;
 }
 
 td {
     padding: 12px;
     border-bottom: 1px solid #eee;
+    text-align: center;
 }
 
 tr:hover {
@@ -175,80 +175,74 @@ tr:hover {
     <div class="title">BifidoBase</div>
     <div class="subtitle">Global Bifidobacterium Genome Database</div>
 </div>
+<div class="navbar">
+    <a href="/">Home</a>
+    <a href="/search-page">Search</a>
+    <a href="/compare-page">Compare</a>
+    <a href="/annotation">Annotation</a>
+</div>
+<div class="hero">
+    <h1>Explore Bifidobacterium Genomes</h1>
+    <p>
+        A comprehensive platform for genome exploration, comparative analysis,
+        and functional annotation of Bifidobacterium species.
+    </p>
+</div>
+<div class="section-divider"></div>
+<!-- STATS -->
+<div class="stats">
+    <div class="stat-box">
+        <h2 id="totalGenomes">--</h2>
+        <p>Total Genomes</p>
+    </div>
+    <div class="stat-box">
+        <h2 id="totalSpecies">--</h2>
+        <p>Total Species</p>
+    </div>
+    <div class="stat-box">
+        <h2 id="totalCountries">--</h2>
+        <p>Total Countries</p>
+    </div>
+</div>
+<div class="info-strip">
+    <div>✔ Curated Genomes</div>
+    <div>✔ Functional Annotation</div>
+    <div>✔ Comparative Analysis</div>
+</div>
+<!-- FEATURES -->
+<div class="features">
 
-<div class="container">
-
-    <!-- STATS -->
-    <div class="stats">
-        <div class="stat-card">
-            <div class="stat-value" id="totalGenomes">--</div>
-            <div class="stat-label">Total Genomes</div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-value" id="totalSpecies">--</div>
-            <div class="stat-label">Species</div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-value" id="totalCountries">--</div>
-            <div class="stat-label">Countries</div>
-        </div>
+    <div class="feature-card">
+        <h3>🔍 Search</h3>
+        <p>Explore genomes with filters and metadata.</p>
+        <a href="/search-page">Open →</a>
     </div>
 
-    <!-- SEARCH -->
-    <div class="search-box">
-        <input type="text" id="searchBox" placeholder="Search species (e.g. longum)">
-        <div id="suggestions"></div>
+    <div class="feature-card">
+        <h3>⚖️ Compare</h3>
+        <p>Compare genome statistics and assembly quality.</p>
+        <a href="/compare-page">Open →</a>
     </div>
 
-    <!-- FILTERS -->
-    <div class="filters">
-        <select id="sourceFilter"></select>
-        <select id="countryFilter"></select>
-
-        <select id="assemblyFilter">
-            <option value="">All Assemblies</option>
-            <option value="refseq">RefSeq</option>
-            <option value="genbank">GenBank</option>
-        </select>
-
-        <select id="sortFilter">
-            <option value="">Sort By</option>
-            <option value="genome_size_desc">Genome Size ↓</option>
-            <option value="genome_size_asc">Genome Size ↑</option>
-            <option value="gc_content_desc">GC ↓</option>
-            <option value="gc_content_asc">GC ↑</option>
-        </select>
-
-        <button onclick="searchData()">Search</button>
+    <div class="feature-card">
+        <h3>🧬 Annotation</h3>
+        <p>Analyze CAZy, AMR, virulence and functions.</p>
+        <a href="/annotation">Open →</a>
     </div>
-
-    <div id="resultCount"></div>
-
-    <!-- COMPARE BUTTON -->
-    <a href="/compare-page">
-        <button class="compare-btn">Compare Genomes</button>
-    </a>
-
-    <!-- TABLE -->
-    <table>
-        <thead>
-            <tr>
-                <th>Accession</th>
-                <th>Species</th>
-                <th>Source</th>
-                <th>Country</th>
-            </tr>
-        </thead>
-        <tbody id="resultsTable"></tbody>
-    </table>
-
-    <div id="pagination"></div>
 
 </div>
-
-<script src="{{ url_for('static', filename='script.js') }}"></script>
-
+<canvas id="genomeChart"></canvas>
+<!-- ABOUT -->
+<div class="about-preview">
+    <h2>About BifidoBase</h2>
+    <p>
+        BifidoBase is a curated genomic database providing access to 
+        Bifidobacterium genomes, metadata and functional annotations. 
+        It enables genome exploration, comparative analysis and 
+        data-driven microbiological research.
+    </p>
+</div>
+<script src="/static/script.js"></script>
 </body>
 </html>
+

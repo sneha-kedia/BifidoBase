@@ -171,21 +171,21 @@
     </div>
 
     <!-- EXTERNAL LINKS -->
-    <h2>External Links</h2>
-    <div class="card">
+<h3>NCBI Links</h3>
 
-        <a class="btn"
-           href="https://www.ncbi.nlm.nih.gov/assembly/{{ data.assembly_accession }}"
-           target="_blank">
-           View on NCBI
-        </a>
+<a href="https://www.ncbi.nlm.nih.gov/assembly/{{ data['assembly_accession'] }}" target="_blank">
+    View Assembly
+</a>
 
-        <br>
+<br><br>
 
-        <button class="btn" onclick="downloadJSON()">
-            Download Metadata (JSON)
-        </button>
-
+<a href="https://www.ncbi.nlm.nih.gov/biosample/{{ data['biosample'] }}" target="_blank">
+    View BioSample
+</a>
+<br><br>
+<a href="/genome-json/{{ data['assembly_accession'] }}" target="_blank">
+    Download JSON
+</a>
     </div>
 
 <script>
