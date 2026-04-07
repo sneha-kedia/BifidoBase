@@ -1,43 +1,21 @@
-from flask import Flask, render_template, request, jsonify, Response
+from flask import Flask, jsonify, request, render_template
+import requests
 
 app = Flask(__name__)
-import os
-import pandas as pd
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-import sqlite3
+from supabase import create_client
 
-def get_db_connection():
-    db_path = os.path.join(BASE_DIR, "your_database.db")
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    return conn
-def load_data():
-    csv_path = os.path.join(BASE_DIR, "metadata_final.csv")
-    print("Loading from:", csv_path)   # ✅ FIXED
-    df = pd.read_csv(csv_path)
-    print("Shape:", df.shape)
-    df["assembly_type"] = df["assembly_accession"].apply(
-    lambda x: "RefSeq" if str(x).startswith("GCF") else "GenBank"
-    ) 
-    return df.fillna("unknown")   
+# -------------------------------
+# SUPABASE CONFIG
+# -------------------------------
+SUPABASE_URL = "https://rhbcztpxudkgyrqmzjir.supabase.co"
+SUPABASE_KEY = "sb_publishable_HACQ5tt20RG4j9y4FmDuGA_9VN4SZPD"
 
-# 🔥 FIX SPECIES (VERY IMPORTANT)
-import re
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-def extract_species(x):
-    if pd.isna(x):
-        return "unknown"
-    x = str(x)
-    match = re.match(r"(Bifidobacterium\s+\w+)", x)
-    if match:
-        return match.group(1)
-    return x
-
-
-# ==============================
-# HOME
-# ==============================
+# -------------------------------
+# HOME PAGE
+# -------------------------------
 @app.route("/")
 def home():
     return render_template("index.html")
@@ -46,247 +24,167 @@ def home():
 def search_page():
     return render_template("search.html")
 
-@app.route("/compare-page")
-def compare_page():
-    return render_template("compare.html")   # make sure this file exists
 
+# -------------------------------
+# STATS API
+# -------------------------------
+@app.route("/api/stats")
+def get_stats():
+    try:
+        # Total genomes
+        total_genomes = supabase.table("genomes").select("accession", count="exact").execute().count
 
-@app.route("/annotation")
-def annotation_page():
-    return render_template("annotation.html")  
-# ==============================
-# SEARCH
-# ==============================
-@app.route("/search")
+        # Total species (DISTINCT)
+        species_data = supabase.table("genomes").select("species").execute().data
+        unique_species = len(set([s["species"] for s in species_data if s["species"]]))
+
+        # Total countries (DISTINCT)
+        country_data = supabase.table("biosamples").select("country").execute().data
+        unique_countries = len(set([c["country"] for c in country_data if c["country"]]))
+
+        return jsonify({
+            "genomes": total_genomes,
+            "species": unique_species,
+            "countries": unique_countries
+        })
+
+    except Exception as e:
+        print("STATS ERROR:", e)
+        return jsonify({"genomes": 0, "species": 0, "countries": 0})
+
+# -------------------------------
+# SEARCH API (FULL FIX)
+# -------------------------------
+@app.route("/api/search")
 def search():
-
-    query = request.args.get("query", "").lower()
-    source = request.args.get("source", "")
-    country = request.args.get("country", "")
-    assembly = request.args.get("assembly_type", "")
-    sort = request.args.get("sort", "")
-    assembly_level = request.args.get("assembly_level", "")
+    query_text = request.args.get("q", "").strip()
+    country = request.args.get("country", "All")
+    source = request.args.get("source", "All")
+    assembly = request.args.get("assembly", "All")
     page = int(request.args.get("page", 1))
-    per_page = 50
 
-    df = load_data()
-    results = df.copy()
+    limit = 50
+    offset = (page - 1) * limit
 
-    # SEARCH (FIXED)
-    if query:
-        results = results[
-    results["species_final"].str.lower().str.contains(query, na=False) |
-    results["assembly_accession"].str.lower().str.contains(query, na=False)
-]
-    # FILTERS
-    if source:
-        results = results[results["source_final"] == source]   # 👈 better for UI
+    try:
+        query = supabase.table("genomes") \
+            .select("accession, species, assembly_level, biosamples!inner(country, source)")
 
-    if country:
-        results = results[results["country_final"] == country]
+        # SEARCH
+        if query_text:
+            query = query.or_(
+                f"species.ilike.%{query_text}%,accession.ilike.%{query_text}%"
+            )
 
-    if assembly.lower() == "refseq":
-        results = results[results["assembly_accession"].str.startswith("GCF")]
-    elif assembly.lower() == "genbank":
-        results = results[results["assembly_accession"].str.startswith("GCA")]
+        # FILTERS
+        if assembly != "All":
+            query = query.eq("assembly_level", assembly)
 
-    if assembly_level:
-        results = results[results["assembly_level"] == assembly_level]
-    # SORT
-    if sort == "genome_size_asc":
-        results = results.sort_values("genome_size")
-    elif sort == "genome_size_desc":
-        results = results.sort_values("genome_size", ascending=False)
-    elif sort == "gc_content_asc":
-        results = results.sort_values("gc_content")
-    elif sort == "gc_content_desc":
-        results = results.sort_values("gc_content", ascending=False)
+        if country != "All":
+            query = query.ilike("biosamples.country", f"%{country}%")
 
-    # PAGINATION
-    total = len(results)
-    start = (page - 1) * per_page
-    end = start + per_page
-    results_page = results.iloc[start:end]
+        if source != "All":
+            query = query.ilike("biosamples.source", f"%{source}%")
 
-    return jsonify({
-        "data": results_page.to_dict(orient="records"),
-        "total": total
-    })
+        # PAGINATION
+        res = query.range(offset, offset + limit - 1).execute()
+        genomes = res.data
 
-# ==============================
-# FILTER DROPDOWNS
-# ==============================
-@app.route("/filters")
-def filters():
-    df = load_data()
-    return jsonify({
-        "sources": sorted(df["source_final"].dropna().unique().tolist()),
-        "countries": sorted(df["country_final"].dropna().unique().tolist()),
-        "species": sorted(df["species_final"].dropna().unique().tolist()),
-        "assembly_levels": sorted(df["assembly_level"].dropna().unique().tolist()),
-        "accessions": sorted(df["assembly_accession"].dropna().unique().tolist())  # 🔥 ADD THIS
-    })
+        results = []
 
-# ==============================
-# DOWNLOAD
-# ==============================
-@app.route("/download")
-def download():
-    df = load_data()   # 🔥 ADD THIS
-    csv_data = df.to_csv(index=False)
+        for g in genomes:
+            bio = g.get("biosamples")
 
-    return Response(
-        csv_data,
-        mimetype="text/csv",
-        headers={"Content-disposition": "attachment; filename=bifidobase_results.csv"}
-    )
-# ==============================
-# GENOME PAGE
-# ==============================
-@app.route("/genome/<acc>")
-def genome_page(acc):
-    df = load_data()
+            if isinstance(bio, list):
+                bio = bio[0] if bio else {}
+            elif bio is None:
+                bio = {}
 
-    row = df[df["assembly_accession"] == acc]
+            results.append({
+                "accession": g.get("accession"),
+                "species": " ".join(g.get("species", "").split()[:2]),
+                "assembly_level": g.get("assembly_level"),
+                "country": bio.get("country", "unknown"),
+                "source": bio.get("source", "unknown"),
+            })
 
-    if row.empty:
-        return "Genome not found"
+        return jsonify(results)
 
-    data = row.to_dict(orient="records")[0]
-
-    return render_template("genome.html", data=data)
-@app.route("/genome-json/<acc>")
-def genome_json(acc):
-    df = load_data()
-    row = df[df["assembly_accession"] == acc]
-
-    if row.empty:
-        return jsonify({"error": "not found"})
-
-    return jsonify(row.to_dict(orient="records")[0])
-# ==============================
-# STATS
-# ==============================
-@app.route("/stats")
-def stats():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    total = cursor.execute(
-        "SELECT COUNT(*) FROM genomes"
-    ).fetchone()[0]
-
-    species = cursor.execute("""
-        SELECT COUNT(DISTINCT species_final)
-        FROM genomes
-        WHERE species_final IS NOT NULL
-        AND TRIM(LOWER(species_final)) NOT IN ('unknown','none','nan','')
-    """).fetchone()[0]
-
-    countries = cursor.execute("""
-        SELECT COUNT(DISTINCT country_final)
-        FROM genomes
-        WHERE country_final IS NOT NULL
-        AND TRIM(LOWER(country_final)) NOT IN ('unknown','none','nan','')
-    """).fetchone()[0]
-
-    conn.close()
-
-    return jsonify({
-        "total": total,
-        "species": species,
-        "countries": countries
-    })
-# ==============================
-# AUTOCOMPLETE
-# ==============================
-@app.route("/autocomplete")
-def autocomplete():
-    import re
-
-    q = request.args.get("q", "").lower().strip()
-    if not q:
+    except Exception as e:
+        print("SEARCH ERROR:", e)
         return jsonify([])
 
-    df = load_data()  # keep this (since your project uses dataframe)
 
-    species_raw = df["species_final"].dropna().unique()
+# -------------------------------
+# FILTER OPTIONS API
+# -------------------------------
+@app.route("/api/filters")
+def get_filters():
+    try:
+        b_res = supabase.table("biosamples").select("*").execute()
+        g_res = supabase.table("genomes").select("assembly_level").execute()
 
-    cleaned_species = set()
+        countries = set()
+        sources = set()
+        assemblies = set()
 
-    for s in species_raw:
-        s = str(s)
+        for row in b_res.data:
+            if row.get("country"):
+                countries.add(row["country"])
 
-        # remove brackets
-        s = re.sub(r"[\[\]]", "", s)
+            # handle both cases safely
+            src = row.get("source") or row.get("isolation_source")
+            if src:
+                sources.add(src)
 
-        # extract "Bifidobacterium species"
-        match = re.match(r"(Bifidobacterium\s+\w+)", s)
+        for row in g_res.data:
+            if row.get("assembly_level"):
+                assemblies.add(row["assembly_level"])
 
-        if match:
-            cleaned_species.add(match.group(1))
+        return jsonify({
+            "countries": sorted(countries),
+            "sources": sorted(sources),
+            "assemblies": sorted(assemblies)
+        })
 
-    # 🔥 IMPROVED MATCHING (faster + cleaner)
-    matches = [s for s in cleaned_species if q in s.lower()]
+    except Exception as e:
+        print("FILTER ERROR:", e)
+        return jsonify({"countries": [], "sources": [], "assemblies": []})
 
-    return jsonify(sorted(matches)[:10])   # limit to 10 for speed
-# ==============================
-# COMPARE PAGE
-# ==============================
-@app.route("/compare")
-def compare():
-    acc1 = request.args.get("acc1")
-    acc2 = request.args.get("acc2")
 
-    conn = sqlite3.connect("your_database.db")
-    conn.row_factory = sqlite3.Row
-    cur = conn.cursor()
+# -------------------------------
+# AUTOCOMPLETE (FINAL FIX)
+# -------------------------------
+@app.route("/api/autocomplete")
+def autocomplete():
+    query = request.args.get("q", "").lower()
 
-    def fetch_row(acc):
-        cur.execute("SELECT * FROM genomes WHERE assembly_accession=?", (acc,))
-        return cur.fetchone()
+    if not query:
+        return jsonify([])
 
-    def get_best(acc):
-        row = fetch_row(acc)
+    try:
+        response = supabase.table("genomes") \
+            .select("species") \
+            .ilike("species", f"%{query}%") \
+            .limit(50) \
+            .execute()
 
-        # ✅ If row exists AND genome_size is NOT NULL
-        if row is not None and row["genome_size"] is not None:
-            return row
+        species_set = set()
 
-        # 🔁 fallback GCF → GCA
-        if acc.startswith("GCF"):
-            gca = acc.replace("GCF", "GCA")
-            row2 = fetch_row(gca)
-            if row2 is not None:
-                return row2
+        for row in response.data:
+            sp = row.get("species")
+            if sp:
+                species_set.add(" ".join(sp.split()[:2]))
 
-        return row
+        return jsonify(sorted(species_set)[:20])
 
-    row1 = get_best(acc1)
-    row2 = get_best(acc2)
+    except Exception as e:
+        print("AUTOCOMPLETE ERROR:", e)
+        return jsonify([])
 
-    def safe(val):
-        return val if val is not None else "NA"
 
-    return jsonify({
-        "genome_size_1": safe(row1["genome_size"]) if row1 else "NA",
-        "genome_size_2": safe(row2["genome_size"]) if row2 else "NA",
-        "gc_1": safe(row1["gc_content"]) if row1 else "NA",
-        "gc_2": safe(row2["gc_content"]) if row2 else "NA"
-    })
-
-# ACCESSIONS
-# ==============================
-@app.route("/accessions")
-def accessions():
-    df = load_data()
-    return jsonify(df["assembly_accession"].dropna().unique().tolist())
-
-# ==============================
+# -------------------------------
 # RUN
-# ==============================
-import os
-
+# -------------------------------
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(debug=True, port=10000)
