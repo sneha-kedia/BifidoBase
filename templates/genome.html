@@ -10,7 +10,6 @@
             background: #f5f7fb;
         }
 
-        /* HEADER */
         .header {
             background: linear-gradient(90deg, #1e3a8a, #2563eb);
             color: white;
@@ -20,14 +19,12 @@
             font-weight: 600;
         }
 
-        /* CONTAINER */
         .container {
             max-width: 1000px;
             margin: 40px auto;
             padding: 20px;
         }
 
-        /* TITLE */
         .title-card {
             background: white;
             padding: 18px;
@@ -37,7 +34,6 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
 
-        /* STATS */
         .stats {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -59,19 +55,6 @@
             font-weight: bold;
         }
 
-        .gc-bar {
-            margin-top: 5px;
-            background: rgba(255,255,255,0.3);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .gc-fill {
-            height: 8px;
-            background: white;
-        }
-
-        /* SECTIONS */
         h2 {
             margin-top: 30px;
             color: #1e3a8a;
@@ -92,18 +75,6 @@
         .label {
             font-weight: 600;
         }
-
-        /* BUTTON */
-        .btn {
-            margin-top: 10px;
-            padding: 10px 14px;
-            border: none;
-            border-radius: 8px;
-            background: linear-gradient(90deg, #2563eb, #14b8a6);
-            color: white;
-            cursor: pointer;
-        }
-
     </style>
 </head>
 
@@ -115,101 +86,97 @@
 
 <div class="container">
 
-    <!-- ACCESSION -->
-    <div class="title-card">
-        {{ data.assembly_accession }}
+    <!-- TITLE -->
+    <div class="title-card" id="titleCard">
+        Loading genome...
     </div>
 
     <!-- STATS -->
-    <div class="stats">
+    <div class="stats" id="statsSection"></div>
 
+    <!-- OVERVIEW -->
+    <h2>Genome Overview</h2>
+    <div class="card" id="overviewSection"></div>
+
+    <!-- METADATA -->
+    <h2>Metadata</h2>
+    <div class="card" id="metadataSection"></div>
+
+</div>
+
+<script>
+const accession = "{{ accession }}";
+
+async function loadGenome() {
+    const res = await fetch(`/api/genome/${accession}`);
+    const data = await res.json();
+
+    // TITLE + SPECIES + BADGE
+    document.getElementById("titleCard").innerHTML = `
+        ${data.accession}
+
+        <div style="font-size:14px; color:#555; margin-top:5px;">
+            ${data.species || "Unknown species"}
+        </div>
+
+        ${data.genome_type === "MAG"
+            ? '<span style="background:#fff3cd; color:#b45309; padding:3px 8px; border-radius:6px; font-size:12px; margin-left:10px;">MAG</span>'
+            : '<span style="background:#e6f9ec; color:#15803d; padding:3px 8px; border-radius:6px; font-size:12px; margin-left:10px;">Isolate</span>'
+        }
+    `;
+
+    // SAFE VALUE HANDLER
+    function val(x) {
+        return (x !== null && x !== undefined) ? x : "NA";
+    }
+
+    // STATS
+    document.getElementById("statsSection").innerHTML = `
         <div class="stat-box">
             🧬
-            <div class="stat-value">{{ data.genome_size }}</div>
+            <div class="stat-value">${val(data.genome_size).toLocaleString?.() || val(data.genome_size)}</div>
             Genome Size
         </div>
 
         <div class="stat-box">
             🧪
-            <div class="stat-value">{{ data.gc_content }}%</div>
+            <div class="stat-value">${val(data.gc_content)}%</div>
             GC Content
-            <div class="gc-bar">
-                <div class="gc-fill" style="width: {{ data.gc_content }}%"></div>
-            </div>
         </div>
 
         <div class="stat-box">
             📊
-            <div class="stat-value">{{ data.n50 }}</div>
+            <div class="stat-value">${val(data.n50).toLocaleString?.() || val(data.n50)}</div>
             N50
         </div>
 
         <div class="stat-box">
             🧩
-            <div class="stat-value">{{ data.contig_count }}</div>
+            <div class="stat-value">${val(data.contigs).toLocaleString?.() || val(data.contigs)}</div>
             Contigs
         </div>
+    `;
 
-    </div>
+    // QUALITY
+    let quality = "Low";
+    if (data.n50 && data.n50 > 200000) quality = "High";
+    else if (data.n50 && data.n50 > 50000) quality = "Medium";
 
-    <!-- OVERVIEW -->
-    <h2>Genome Overview</h2>
-    <div class="card">
-        <div class="row"><span class="label">Species:</span> {{ data.species }}</div>
-        <div class="row"><span class="label">Strain:</span> {{ data.strain }}</div>
-        <div class="row"><span class="label">Assembly Level:</span> {{ data.assembly_level }}</div>
-    </div>
+    // OVERVIEW
+    document.getElementById("overviewSection").innerHTML = `
+        <div class="row"><span class="label">Species:</span> ${val(data.species)}</div>
+        <div class="row"><span class="label">Assembly Level:</span> ${val(data.assembly_level)}</div>
+        <div class="row"><span class="label">Assembly Quality:</span> ${quality}</div>
+    `;
 
-    <!-- METADATA -->
-    <h2>Metadata</h2>
-    <div class="card">
-        <div class="row"><span class="label">Source:</span> {{ data.source_clean }}</div>
-        <div class="row"><span class="label">Country:</span> {{ data.country_clean }}</div>
-        <div class="row"><span class="label">Host:</span> {{ data.host_clean }}</div>
-        <div class="row"><span class="label">BioProject:</span> {{ data.bioproject }}</div>
-        <div class="row"><span class="label">BioSample:</span> {{ data.biosample }}</div>
-    </div>
-
-    <!-- EXTERNAL LINKS -->
-<h3>NCBI Links</h3>
-
-<a href="https://www.ncbi.nlm.nih.gov/assembly/{{ data['assembly_accession'] }}" target="_blank">
-    View Assembly
-</a>
-
-<br><br>
-
-<a href="https://www.ncbi.nlm.nih.gov/biosample/{{ data['biosample'] }}" target="_blank">
-    View BioSample
-</a>
-<br><br>
-<a href="/genome-json/{{ data['assembly_accession'] }}" target="_blank">
-    Download JSON
-</a>
-    </div>
-
-<script>
-async function loadSimilar() {
-    const res = await fetch("/similar/{{ data.assembly_accession }}");
-    const data = await res.json();
-
-    let html = "";
-
-    data.forEach(d => {
-        html += `<div>${d.assembly_accession} - ${d.species}</div>`;
-    });
-
-    document.getElementById("similarResults").innerHTML = html;
+    // METADATA
+    document.getElementById("metadataSection").innerHTML = `
+        <div class="row"><span class="label">Source:</span> ${val(data.source)}</div>
+        <div class="row"><span class="label">Country:</span> ${val(data.country)}</div>
+    `;
 }
 
-function downloadJSON() {
-    const data = {{ data | tojson }};
-    const blob = new Blob([JSON.stringify(data, null, 2)]);
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "{{ data.assembly_accession }}.json";
-    a.click();
-}
+loadGenome();
 </script>
 
 </body>
