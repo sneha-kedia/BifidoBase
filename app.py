@@ -2,6 +2,7 @@ print("🔥 APP FILE LOADED FROM:", __file__)
 from flask import Flask, jsonify, request, render_template, send_file
 import requests
 import time
+import pandas as pd
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
@@ -14,8 +15,11 @@ from supabase import create_client
 # -------------------------------
 # SUPABASE CONFIG
 # -------------------------------
-SUPABASE_URL = "https://rhbcztpxudkgyrqmzjir.supabase.co"
-SUPABASE_KEY = "sb_publishable_HACQ5tt20RG4j9y4FmDuGA_9VN4SZPD"
+import os
+from supabase import create_client
+
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -235,6 +239,102 @@ def download_genomes():
         as_attachment=True,
         download_name="bifidobase_genomes.zip"
     )
+
+@app.route("/api/cazyme")
+def get_cazyme():
+    accession = request.args.get("accession")
+
+    res = supabase.table("cazyme_summary") \
+        .select("*") \
+        .eq("accession", accession) \
+        .execute()
+
+    return jsonify(res.data)
+
+@app.route("/api/cazyme_details")
+def get_cazyme_details():
+    accession = request.args.get("accession")
+    family = request.args.get("family")
+
+    res = supabase.table("cazyme_details") \
+        .select("*") \
+        .eq("accession", accession) \
+        .like("family", f"{family}%") \
+        .execute()
+
+    return jsonify(res.data)
+
+
+@app.route("/api/functional")
+def get_functional():
+    accession = request.args.get("accession")
+
+    res = supabase.table("functional_summary") \
+        .select("*") \
+        .eq("accession", accession) \
+        .execute()
+
+    return jsonify(res.data)
+
+
+@app.route("/api/functional_details")
+def functional_details():
+    accession = request.args.get("accession")
+    category = request.args.get("category")
+    offset = int(request.args.get("offset", 0))
+
+    res = supabase.table("functional_details") \
+        .select("protein, domain, evalue") \
+        .eq("accession", accession) \
+        .eq("category", category) \
+        .range(offset, offset + 99) \
+        .execute()
+
+    return jsonify(res.data)
+
+
+# -------------------------------
+# AMR API (FROM LOCAL FILES)
+# -------------------------------
+@app.route("/api/amr")
+def get_amr():
+    accession = request.args.get("accession")
+
+    base = "/mnt/e/BifidoBase/annotation_pipeline/prokka_output"
+
+    # find correct folder
+    folder = None
+    for d in os.listdir(base):
+        if accession in d:
+            folder = d
+            break
+
+    if not folder:
+        return jsonify([])
+
+    amr_file = os.path.join(base, folder, "abricate_ncbi.tsv")
+
+    if not os.path.exists(amr_file):
+        return jsonify([])
+
+    try:
+        # robust read (important for weird formatting)
+        df = pd.read_csv(amr_file, sep="\t", engine="python")
+
+        result = []
+        for _, row in df.iterrows():
+            result.append({
+                "gene": row.get("GENE", ""),
+                "resistance": row.get("RESISTANCE", ""),
+                "identity": row.get("%IDENTITY", ""),
+                "coverage": row.get("%COVERAGE", "")
+            })
+
+        return jsonify(result)
+
+    except Exception as e:
+        print("AMR ERROR:", e)
+        return jsonify([])
 
 
 # -------------------------------

@@ -3,6 +3,7 @@
 <head>
     <title>BifidoBase - Genome</title>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             margin: 0;
@@ -75,6 +76,36 @@
         .label {
             font-weight: 600;
         }
+        /* ===== TABS ===== */
+        .tabs {
+            margin-top: 30px;
+        }
+
+        .tab-btn {
+            padding: 10px 18px;
+            border: none;
+            background: #e5e7eb;
+            cursor: pointer;
+            margin-right: 5px;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+
+        .tab-btn.active {
+            background: #2563eb;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+
+
     </style>
 </head>
 
@@ -94,18 +125,66 @@
     <!-- STATS -->
     <div class="stats" id="statsSection"></div>
 
-    <!-- OVERVIEW -->
-    <h2>Genome Overview</h2>
-    <div class="card" id="overviewSection"></div>
+    <div class="tabs">
+        <button class="tab-btn active" onclick="openTab(event,'overview')">Overview</button>
+        <button class="tab-btn" onclick="openTab(event,'functional')">Functional Annotation</button>
+        <button class="tab-btn" onclick="openTab(event,'cazyme')">CAZyme Profile</button>
+        <button class="tab-btn" onclick="openTab(event,'amr')">AMR Profile</button>
+    </div>
 
-    <!-- METADATA -->
-    <h2>Metadata</h2>
-    <div class="card" id="metadataSection"></div>
+    <!-- OVERVIEW -->
+    <div id="overview" class="tab-content active">
+
+        <h2>Genome Overview</h2>
+        <div class="card" id="overviewSection"></div>
+
+        <h2>Metadata</h2>
+        <div class="card" id="metadataSection"></div>
+
+    </div>
+
+    <div id="functional" class="tab-content">
+
+        <h2>Functional Annotation</h2>
+    <div id="functional-section"></div>
+
+    <div class="card">
+        <h3 style="text-align:center; margin-bottom:10px;">Functional Distribution</h3>
+        <div style="display:flex; justify-content:center;">
+            <canvas id="functionalChart" style="width:350px; height:350px;"></canvas>
+        </div>
+    </div>
+
+    <div id="category-details"></div>
+
+    </div>
+
+    <div id="cazyme" class="tab-content">
+
+        <h2>CAZyme Profile</h2>
+
+        <div id="cazyme-section"></div>
+
+        <div class="card" style="display:flex; justify-content:center; height:350px;">
+            <canvas id="cazymeChart"></canvas>
+        </div>
+    </div>
+
+    <div id="amr" class="tab-content">
+
+        <h2>AMR Profile</h2>
+
+        <div id="amr-section"></div>
+
+    </div>
 
 </div>
-
 <script>
 const accession = "{{ accession }}";
+
+let currentCategory = "";
+let currentOffset = 0;
+let currentCategoryData = [];
 
 async function loadGenome() {
     const res = await fetch(`/api/genome/${accession}`);
@@ -124,6 +203,7 @@ async function loadGenome() {
             : '<span style="background:#e6f9ec; color:#15803d; padding:3px 8px; border-radius:6px; font-size:12px; margin-left:10px;">Isolate</span>'
         }
     `;
+
 
     // SAFE VALUE HANDLER
     function val(x) {
@@ -176,7 +256,394 @@ async function loadGenome() {
     `;
 }
 
+let chartInstance = null;
+
+async function loadFunctional() {
+    const res = await fetch(`/api/functional?accession=${accession}`);
+    const data = await res.json();
+
+    // -------- TABLE --------
+    let html = `
+        <div class="card">
+        <table style="width:100%; border-collapse:collapse;">
+            <tr style="background:#f0f4ff;">
+                <th style="padding:10px; text-align:left;">Category</th>
+                <th style="padding:10px; text-align:right;">Count</th>
+            </tr>
+    `;
+
+    data.forEach(item => {
+        html += `
+            <tr onclick="loadCategory('${item.category}')"
+                style="cursor:pointer;">
+                <td style="padding:10px;">${item.category.replaceAll("_"," ")}</td>
+                <td style="padding:10px; text-align:right;">${item.count}</td>
+            </tr>
+        `;
+    });
+
+    html += "</table></div>";
+    document.getElementById("functional-section").innerHTML = html;
+
+    // -------- PIE CHART --------
+    const filtered = data.filter(d => d.category !== "other");
+
+    const labels = filtered.map(d => d.category.replaceAll("_"," "));
+    const counts = filtered.map(d => d.count);
+
+    const colorMap = {
+        "transport": "#2563eb",
+        "regulation": "#f59e0b",
+        "hydrolase": "#10b981",
+        "carbohydrate_metabolism": "#ef4444",
+        "mobile_elements": "#8b5cf6",
+        "transferase": "#14b8a6"
+    };
+
+    const colors = filtered.map(d => colorMap[d.category] || "#9ca3af");
+
+    const ctx = document.getElementById("functionalChart").getContext("2d");
+
+    if (chartInstance) {
+        chartInstance.destroy();
+    }
+
+    chartInstance = new Chart(ctx, {
+        type: "pie",
+        data: {
+            labels: labels,
+            datasets: [{
+                data: counts,
+                backgroundColor: colors
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: "bottom"
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const data = context.dataset.data;
+                            const total = data.reduce((a, b) => a + b, 0);
+                            const value = context.raw;
+                            const percent = ((value / total) * 100).toFixed(1);
+                            return `${context.label}: ${value} (${percent}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+async function loadCategory(category) {
+    currentCategory = category;
+    currentOffset = 0;
+    currentCategoryData = [];
+
+    // create UI FIRST
+    let html = `
+    <div class="card">
+        <h3>${category.replaceAll("_"," ")}</h3>
+
+        <button onclick="downloadCSV()"
+                style="margin:10px 0; padding:8px 12px; background:#2563eb; color:white; border:none; border-radius:6px; cursor:pointer;">
+            Download CSV
+        </button>
+
+        <input type="text" id="geneSearch"
+               onkeyup="filterGenes()"
+               placeholder="Search protein or domain..."
+               style="margin:10px 0; padding:8px; width:100%; border:1px solid #ccc; border-radius:6px;">
+
+        <table id="geneTable" style="width:100%; border-collapse:collapse;">
+            <tr style="background:#f0f4ff;">
+                <th style="padding:10px; text-align:left; width:40%;">Protein</th>
+                <th style="padding:10px; text-align:left; width:40%;">Domain</th>
+                <th style="padding:10px; text-align:right; width:20%;">E-value</th>
+            </tr>
+        </table>
+    </div>
+    `;
+
+    document.getElementById("category-details").innerHTML = html;
+
+    // THEN load data
+    await loadMoreGenes(true);
+}
+
+
+
+function filterGenes() {
+    const input = document.getElementById("geneSearch").value.toLowerCase();
+    const rows = document.querySelectorAll("#geneTable tr");
+
+    rows.forEach((row, index) => {
+        if (index === 0) return; // skip header
+
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(input) ? "" : "none";
+    });
+}
+
+function downloadCSV() {
+    if (!currentCategoryData.length) return;
+
+    let csv = "protein,domain,evalue\n";
+
+    currentCategoryData.forEach(d => {
+        csv += `${d.protein},${d.domain},${d.evalue}\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "functional_genes.csv";
+    a.click();
+
+    window.URL.revokeObjectURL(url);
+}
+function openTab(evt, tabName) {
+    document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
+    document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
+
+    document.getElementById(tabName).classList.add("active");
+    evt.currentTarget.classList.add("active");
+}
+async function loadMoreGenes(reset=false) {
+
+    const res = await fetch(`/api/functional_details?accession=${accession}&category=${currentCategory}&offset=${currentOffset}`);
+    const data = await res.json();
+
+    if (reset) {
+        currentCategoryData = [];
+    }
+
+    currentCategoryData = currentCategoryData.concat(data);
+
+    let html = `
+    <div class="card">
+        <h3>${currentCategory.replaceAll("_"," ")}</h3>
+
+        <button onclick="downloadCSV()" style="margin:10px 0; padding:8px 12px; background:#2563eb; color:white; border:none; border-radius:6px;">
+            Download CSV
+        </button>
+
+        <input type="text" id="geneSearch" onkeyup="filterGenes()"
+            placeholder="Search protein or domain..."
+            style="margin:10px 0; padding:8px; width:100%; border:1px solid #ccc; border-radius:6px;">
+
+        <table id="geneTable" style="width:100%; border-collapse:collapse;">
+            <tr style="background:#f0f4ff;">
+                <th style="padding:10px; text-align:left; width:40%;">Protein</th>
+                <th style="padding:10px; text-align:left; width:40%;">Domain</th>
+                <th style="padding:10px; text-align:right; width:20%;">E-value</th>
+            </tr>
+    `;
+
+    currentCategoryData.forEach(d => {
+        html += `
+        <tr>
+            <td style="padding:10px;">${d.protein}</td>
+            <td style="padding:10px;">${d.domain}</td>
+            <td style="padding:10px; text-align:right;">${d.evalue}</td>
+        </tr>
+        `;
+    });
+
+    html += "</table>";
+
+    // LOAD MORE BUTTON
+    if (data.length === 100) {
+        html += `
+        <button onclick="loadMoreGenes()" 
+            style="margin-top:15px; padding:10px; width:100%; background:#e5e7eb; border:none; border-radius:6px;">
+            Load More
+        </button>
+        `;
+    } else {
+        html += `
+        <div style="margin-top:15px; text-align:center; color:#6b7280;">
+            No more genes to load
+        </div>
+        `;
+    }
+
+
+    html += "</div>";
+
+    document.getElementById("category-details").innerHTML = html;
+
+    currentOffset += 100;
+}
+
+let cazymeChart = null;
+
+async function loadCAZyme() {
+    const res = await fetch(`/api/cazyme?accession=${accession}`);
+    const data = await res.json();
+
+    let html = `
+        <div class="card">
+        <table style="width:100%; border-collapse:collapse;">
+            <tr style="background:#f0f4ff;">
+                <th style="padding:10px;">Class</th>
+                <th style="padding:10px; text-align:right;">Count</th>
+            </tr>
+    `;
+
+    // 🔥 THIS IS WHERE YOU ADD IT
+    data.forEach(item => {
+        html += `
+            <tr onclick="loadCAZymeCategory('${item.class}')"
+                style="cursor:pointer;">
+                <td style="padding:10px;">${item.class}</td>
+                <td style="padding:10px; text-align:right;">${item.count}</td>
+            </tr>
+        `;
+    });
+
+    html += "</table></div>";
+
+    document.getElementById("cazyme-section").innerHTML = html;
+
+
+    // ===== CHART =====
+    const labels = data.map(d => d.class);
+    const counts = data.map(d => d.count);
+
+    const ctx = document.getElementById("cazymeChart").getContext("2d");
+
+    if (cazymeChart) {
+        cazymeChart.destroy();
+    }
+
+    cazymeChart = new Chart(ctx, {
+        type: "pie",
+        data: {
+            labels: labels,
+            datasets: [{
+                data: counts,
+                backgroundColor: [
+                    "#3b82f6", // GH
+                    "#10b981", // GT
+                    "#f59e0b", // CE
+                    "#ef4444", // AA
+                    "#8b5cf6"  // CBM
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: "bottom"
+                }
+            }
+        }
+    });
+}
+
+async function loadCAZymeCategory(cls) {
+
+    let html = `
+    <div class="card">
+        <h3>${cls} family genes</h3>
+
+        <table style="width:100%; border-collapse:collapse;">
+            <tr style="background:#f0f4ff;">
+                <th style="padding:10px;">Protein</th>
+                <th style="padding:10px;">Family</th>
+                <th style="padding:10px;">E-value</th>
+            </tr>
+    `;
+
+    const res = await fetch(`/api/cazyme_details?accession=${accession}&family=${cls}`);
+    const data = await res.json();
+
+    data.forEach(d => {
+        html += `
+        <tr>
+            <td style="padding:8px;">${d.protein}</td>
+            <td style="padding:8px;">${d.family}</td>
+            <td style="padding:8px;">${d.evalue}</td>
+        </tr>
+        `;
+    });
+
+    html += "</table></div>";
+
+    document.getElementById("cazyme-section").innerHTML += html;
+}
+
+async function loadAMR() {
+    const res = await fetch(`/api/amr?accession=${accession}`);
+    const data = await res.json();
+
+    console.log("AMR DATA:", data);  // 🔥 DEBUG
+
+    let html = `
+        <div class="card">
+        <table style="width:100%; border-collapse:collapse; text-align:center;">
+            <tr style="background:#eef2ff; font-weight:600;">
+                <th style="padding:10px;">Gene</th>
+                <th style="padding:10px;">Resistance</th>
+                <th style="padding:10px; text-align:right;">Identity</th>
+                <th style="padding:10px; text-align:right;">Coverage</th>
+            </tr>
+    `;
+
+    if (!data || data.length === 0) {
+        html += `
+            <tr>
+                <td colspan="4" style="padding:12px; text-align:center; color:#6b7280;">
+                    No AMR genes found
+                </td>
+            </tr>
+        `;
+    } else {
+        data.forEach(d => {
+            html += `
+                <tr>
+                    <td style="padding:10px;">${d.gene}</td>
+                    <td style="padding:10px; color:#ef4444; font-weight:600;">
+                        ${d.resistance}
+                    </td>
+                    <td style="padding:10px; text-align:right;">${d.identity}</td>
+                    <td style="padding:10px; text-align:right;">${d.coverage}</td>
+                </tr>
+            `;
+        });
+    }
+
+    html += "</table></div>";
+
+    document.getElementById("amr-section").innerHTML =
+        `
+        <div style="text-align:center;">
+            <h3 style="margin-bottom:15px;">Total AMR Genes: ${data.length}</h3>
+        </div>
+
+        <div style="max-width:800px; margin:0 auto;">
+            ${html}
+        </div>
+        `;
+
+}
+
+
 loadGenome();
+loadFunctional();
+loadCAZyme();
+loadAMR();
+
+
 </script>
 
 </body>
